@@ -8,19 +8,50 @@ namespace GraphUtility
 {
     public static class GraphUtility
     {
+        public delegate void OnProgress(double progress);
+        public static OnProgress OnFindAllPathsProgress;
+        public static OnProgress OnFindPathProgress;
 
         public static Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>> FindAllPaths<T>(Graph<T> graph)
         {
             Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>> result = new Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>>();
+            OnFindAllPathsProgress?.Invoke(result.Count / (double)graph.Vertices.Count);
             foreach (KeyValuePair<string, Vertex<T>> pair in graph.Vertices)
             {
                 result[pair.Value] = FindPathsForVertex<T>(graph, pair.Value);
+                OnFindAllPathsProgress?.Invoke(result.Count / (double)graph.Vertices.Count);
             }
             return result;
         }
 
+        private static T QueryValue<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Vertex<T> target)
+        {
+            if (source == target)
+            {
+                return default(T);
+            }
+            else
+            {
+                return result[target][0].Value;
+            }
+        }
+
+        private static T ConcatinatedValue<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Edge<T> extension)
+        {
+            return graph.Plus(QueryValue<T>(graph, result, source, extension.Source), extension.Value);
+            if (extension.Source == source)
+            {
+                return extension.Value;
+            }
+            else
+            {
+                return graph.Plus(result[extension.Source][0].Value, extension.Value);
+            }
+        }
+
         public static Dictionary<Vertex<T>, List<Path<T>>> FindPathsForVertex<T>(Graph<T> graph, Vertex<T> vertex)
         {
+
             Dictionary<Vertex<T>, List<Path<T>>> result = new Dictionary<Vertex<T>, List<Path<T>>>();
             List<Vertex<T>> todoVertices = new List<Vertex<T>>();
             foreach (KeyValuePair<string, Vertex<T>> pair in graph.Vertices)
@@ -28,7 +59,11 @@ namespace GraphUtility
                 todoVertices.Add(pair.Value);
             }
 
+            todoVertices.Remove(vertex);
+
             Edge<T> tempEdge = null;
+
+            OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
 
             foreach (Edge<T> edge in vertex.Out)
             {
@@ -46,6 +81,8 @@ namespace GraphUtility
                 return result;
             }
             todoVertices.Remove(tempEdge.Target);
+            OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
+
             result[tempEdge.Target] = new List<Path<T>>()
                 {
                     new Path<T>(graph),
@@ -59,7 +96,7 @@ namespace GraphUtility
                 // find closest untouched vertex
                 foreach (KeyValuePair<string, Edge<T>> pair in graph.Edges)
                 {
-                    if (result.ContainsKey(pair.Value.Source) && !result.ContainsKey(pair.Value.Target))
+                    if ((result.ContainsKey(pair.Value.Source) || pair.Value.Source == vertex) && todoVertices.Contains(pair.Value.Target))
                     {
                         if (tempEdge == null)
                         {
@@ -68,9 +105,9 @@ namespace GraphUtility
                         else
                         {
                             int compareResult = graph.Comparer.Compare(
-                                    graph.Plus(result[pair.Value.Source][0].Value, pair.Value.Value),
-                                    graph.Plus(result[tempEdge.Source][0].Value, tempEdge.Value)
-                                );
+                                ConcatinatedValue<T>(graph, result, vertex, pair.Value),
+                                ConcatinatedValue<T>(graph, result, vertex, tempEdge)
+                            ); 
                             if (compareResult < 0)
                             {
                                 tempEdge = pair.Value;
@@ -85,15 +122,15 @@ namespace GraphUtility
                 }
                 todoVertices.Remove(tempEdge.Target);
 
-                result[tempEdge.Target] = Concatinate<T>(result[tempEdge.Source], tempEdge);
+                result[tempEdge.Target] = Concatinate<T>(graph, result, vertex, tempEdge.Source, tempEdge);
 
                 foreach (Edge<T> outEdge in tempEdge.Target.Out)
                 {
-                    if (result.ContainsKey(outEdge.Target))
+                    if ((result.ContainsKey(outEdge.Target))|| outEdge.Target == vertex)
                     {
                         int compareResult = graph.Comparer.Compare(
-                                graph.Plus(result[outEdge.Source][0].Value, outEdge.Value),
-                                result[outEdge.Target][0].Value
+                                ConcatinatedValue<T>(graph, result, vertex, outEdge),
+                                QueryValue<T>(graph, result, vertex, outEdge.Target)
                             );
                         if (compareResult < 0)
                         {
@@ -101,30 +138,43 @@ namespace GraphUtility
                         }
                         if (compareResult <= 0)
                         {
-                            result[outEdge.Target].AddRange(Concatinate<T>(result[outEdge.Source], outEdge));
+                            result[outEdge.Target].AddRange(Concatinate<T>(graph, result, vertex, outEdge.Source, outEdge));
                         }
                     }
                 }
+
+                OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
             }
 
             return result;
         }
 
-        private static List<Path<T>> Concatinate<T>(List<Path<T>> paths, Edge<T> edge)
+        private static List<Path<T>> Concatinate<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Vertex<T> target, Edge<T> extension)
         {
             List<Path<T>> tempPaths = new List<Path<T>>();
-            foreach (Path<T> path in paths)
+            if (source == target)
             {
-                Path<T> tempPath = new Path<T>(edge.Graph);
-                tempPath.Route.AddRange(path.Route);
-                tempPath.Route.Add(edge);
+                Path<T> tempPath = new Path<T>(graph);
+                tempPath.Route.Add(extension);
                 tempPaths.Add(tempPath);
+            }
+            else
+            {
+                foreach (Path<T> path in result[target])
+                {
+                    Path<T> tempPath = new Path<T>(graph);
+                    tempPath.Route.AddRange(path.Route);
+                    tempPath.Route.Add(extension);
+                    tempPaths.Add(tempPath);
+                }
             }
             return tempPaths;
         }
 
     }
 
+
+    // peer edges not allowed
     public class Graph<T>
     {
         public string Name;
@@ -132,8 +182,10 @@ namespace GraphUtility
         public delegate T PlusDelegate(T t1, T t2);
         public PlusDelegate Plus;
         public IComparer<T> Comparer;
-        public Dictionary<string, Vertex<T>> Vertices { get; set; }
-        public Dictionary<string, Edge<T>> Edges { get; set; }
+        private Dictionary<string, Vertex<T>> _Vertices = new Dictionary<string, Vertex<T>>();
+        public Dictionary<string, Vertex<T>> Vertices { get { return _Vertices; } }
+        private Dictionary<string, Edge<T>> _Edges = new Dictionary<string, Edge<T>>();
+        public Dictionary<string, Edge<T>> Edges { get { return _Edges; } }
 
         public T this[string source, string target]
         {
@@ -198,20 +250,52 @@ namespace GraphUtility
         }
     }
 
-    public interface IGraphElement<T>
+    public class VertexPaths<T>: IGraphElement<T>
     {
-        Graph<T> Graph { get; }
+        public Graph<T> Graph { get; }
+        public Vertex<T> Source { get; }
+
+        public bool MultiPaths { get; }
+
+        private Dictionary<Vertex<T>, List<Path<T>>> paths = new Dictionary<Vertex<T>, List<GraphUtility.Path<T>>>();
+        public VertexPaths(Graph<T> graph, Vertex<T> source, bool multiPaths = false)
+        {
+            Graph = graph;
+            Source = source;
+            MultiPaths = multiPaths;
+        }
+
+        public List<Path<T>> this[Vertex<T> vertex]
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+    }
+
+    public interface IGraphValue<T>
+    {
         T Value { get; }
     }
 
-    public class Vertex<T> : IGraphElement<T>
+    public interface IGraphElement<T>
+    {
+        Graph<T> Graph { get; }
+    }
+
+    public class Vertex<T> : IGraphElement<T>, IGraphValue<T>
     {
         public string Name;
         public Graph<T> Graph { get; }
 
         private T _Value = default(T);
         public T Value { get { return _Value; } set { _Value = value; } }
-
+        public Edge<T> Self { get; set; }
         private List<Edge<T>> _In = new List<Edge<T>>();
         public List<Edge<T>> In { get { return _In; } }
         private List<Edge<T>> _Out = new List<Edge<T>>();
@@ -223,7 +307,7 @@ namespace GraphUtility
         }
     }
 
-    public class Edge<T>: IGraphElement<T>
+    public class Edge<T>: IGraphElement<T>, IGraphValue<T>
     {
         public string Name;
         public Graph<T> Graph { get; }
@@ -239,7 +323,7 @@ namespace GraphUtility
         }
     }
 
-    public class Path<T>: IGraphElement<T>
+    public class Path<T>: IGraphElement<T>, IGraphValue<T>
     {
         public Graph<T> Graph { get; }
         public Vertex<T> Source
@@ -291,6 +375,17 @@ namespace GraphUtility
         public Path(Graph<T> graph)
         {
             Graph = graph;
+        }
+
+        public string VertexRouteString(string concatinator = " -> ")
+        {
+            List<string> vertexNames = new List<string>();
+            vertexNames.Add(Route[0].Source.Name);
+            for (int i = 0; i < Route.Count; i++)
+            {
+                vertexNames.Add(Route[i].Target.Name);
+            }
+            return string.Join(concatinator, vertexNames.ToArray());
         }
     }
 
