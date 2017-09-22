@@ -41,9 +41,9 @@
             this.Button_Build = new System.Windows.Forms.Button();
             this.ProgressBar_PathSetFromVertex = new System.Windows.Forms.ProgressBar();
             this.ProgressBar_PathSetForGraph = new System.Windows.Forms.ProgressBar();
-            this.Button_Map = new System.Windows.Forms.Button();
-            this.Label_AllPaths = new System.Windows.Forms.Label();
-            this.Label_CurrentProgress = new System.Windows.Forms.Label();
+            this.Button_Go = new System.Windows.Forms.Button();
+            this.Label_AllVerticesPaths = new System.Windows.Forms.Label();
+            this.Label_CurrentVertexProgress = new System.Windows.Forms.Label();
             this.Button_Clear = new System.Windows.Forms.Button();
             this.Button_Save = new System.Windows.Forms.Button();
             this.Button_Help = new System.Windows.Forms.Button();
@@ -74,6 +74,7 @@
             // ListBox_Log
             // 
             this.ListBox_Log.FormattingEnabled = true;
+            this.ListBox_Log.HorizontalScrollbar = true;
             this.ListBox_Log.ItemHeight = 12;
             this.ListBox_Log.Location = new System.Drawing.Point(545, 139);
             this.ListBox_Log.Name = "ListBox_Log";
@@ -167,33 +168,33 @@
             this.ProgressBar_PathSetForGraph.Size = new System.Drawing.Size(604, 23);
             this.ProgressBar_PathSetForGraph.TabIndex = 12;
             // 
-            // Button_Map
+            // Button_Go
             // 
-            this.Button_Map.Location = new System.Drawing.Point(708, 68);
-            this.Button_Map.Name = "Button_Map";
-            this.Button_Map.Size = new System.Drawing.Size(45, 52);
-            this.Button_Map.TabIndex = 13;
-            this.Button_Map.Text = "Map";
-            this.Button_Map.UseVisualStyleBackColor = true;
-            this.Button_Map.Click += new System.EventHandler(this.Button_Map_Click);
+            this.Button_Go.Location = new System.Drawing.Point(708, 68);
+            this.Button_Go.Name = "Button_Go";
+            this.Button_Go.Size = new System.Drawing.Size(45, 52);
+            this.Button_Go.TabIndex = 13;
+            this.Button_Go.Text = "Go";
+            this.Button_Go.UseVisualStyleBackColor = true;
+            this.Button_Go.Click += new System.EventHandler(this.Button_Go_Click);
             // 
-            // Label_AllPaths
+            // Label_AllVerticesPaths
             // 
-            this.Label_AllPaths.AutoSize = true;
-            this.Label_AllPaths.Location = new System.Drawing.Point(23, 101);
-            this.Label_AllPaths.Name = "Label_AllPaths";
-            this.Label_AllPaths.Size = new System.Drawing.Size(59, 12);
-            this.Label_AllPaths.TabIndex = 15;
-            this.Label_AllPaths.Text = "All Paths";
+            this.Label_AllVerticesPaths.AutoSize = true;
+            this.Label_AllVerticesPaths.Location = new System.Drawing.Point(13, 102);
+            this.Label_AllVerticesPaths.Name = "Label_AllVerticesPaths";
+            this.Label_AllVerticesPaths.Size = new System.Drawing.Size(77, 12);
+            this.Label_AllVerticesPaths.TabIndex = 15;
+            this.Label_AllVerticesPaths.Text = "All Vertices";
             // 
-            // Label_CurrentProgress
+            // Label_CurrentVertexProgress
             // 
-            this.Label_CurrentProgress.AutoSize = true;
-            this.Label_CurrentProgress.Location = new System.Drawing.Point(14, 75);
-            this.Label_CurrentProgress.Name = "Label_CurrentProgress";
-            this.Label_CurrentProgress.Size = new System.Drawing.Size(77, 12);
-            this.Label_CurrentProgress.TabIndex = 14;
-            this.Label_CurrentProgress.Text = "Current Path";
+            this.Label_CurrentVertexProgress.AutoSize = true;
+            this.Label_CurrentVertexProgress.Location = new System.Drawing.Point(4, 74);
+            this.Label_CurrentVertexProgress.Name = "Label_CurrentVertexProgress";
+            this.Label_CurrentVertexProgress.Size = new System.Drawing.Size(89, 12);
+            this.Label_CurrentVertexProgress.TabIndex = 14;
+            this.Label_CurrentVertexProgress.Text = "Current Vertex";
             // 
             // Button_Clear
             // 
@@ -270,9 +271,9 @@
             this.Controls.Add(this.Button_Help);
             this.Controls.Add(this.Button_Save);
             this.Controls.Add(this.Button_Clear);
-            this.Controls.Add(this.Label_AllPaths);
-            this.Controls.Add(this.Label_CurrentProgress);
-            this.Controls.Add(this.Button_Map);
+            this.Controls.Add(this.Label_AllVerticesPaths);
+            this.Controls.Add(this.Label_CurrentVertexProgress);
+            this.Controls.Add(this.Button_Go);
             this.Controls.Add(this.ProgressBar_PathSetForGraph);
             this.Controls.Add(this.ProgressBar_PathSetFromVertex);
             this.Controls.Add(this.Button_Build);
@@ -310,9 +311,9 @@
         private System.Windows.Forms.Button Button_Build;
         private System.Windows.Forms.ProgressBar ProgressBar_PathSetFromVertex;
         private System.Windows.Forms.ProgressBar ProgressBar_PathSetForGraph;
-        private System.Windows.Forms.Button Button_Map;
-        private System.Windows.Forms.Label Label_AllPaths;
-        private System.Windows.Forms.Label Label_CurrentProgress;
+        private System.Windows.Forms.Button Button_Go;
+        private System.Windows.Forms.Label Label_AllVerticesPaths;
+        private System.Windows.Forms.Label Label_CurrentVertexProgress;
         private System.Windows.Forms.Button Button_Clear;
         private System.Windows.Forms.Button Button_Save;
         private System.Windows.Forms.Button Button_Help;

@@ -170,7 +170,7 @@ namespace GraphUtility
                 }
                 else
                 {
-                    connectivity[i] = new string[2];
+                    connectivity[i] = new string[3];
                     connectivity[i][0] = split[0];
                     connectivity[i][1] = split[1];
                     connectivity[i][2] = split[2];
@@ -283,7 +283,7 @@ namespace GraphUtility
             {
                 Log("Edge File Absent!");
             }
-            string[][] connectivity = LoadEdgeInfo_Coordinate(FileName_Edge);
+            string[][] connectivity = LoadEdgeInfo_Connectivity(FileName_Edge);
             if (connectivity == null)
             {
                 Log("Failed to build graph, please make sure correct edge file is loaded.");
@@ -332,7 +332,7 @@ namespace GraphUtility
         private void Mapped()
         {
             this.Invoke((MethodInvoker)delegate () {
-                Button_Map.Text = "Map";
+                Button_Go.Text = "Map";
 
                 ClearGraphMap();
                 string[] vertexNames = Graph.Vertices.Keys.ToArray();
@@ -341,7 +341,7 @@ namespace GraphUtility
             });
         }
 
-        private void Button_Map_Click(object sender, EventArgs e)
+        private void Button_Go_Click(object sender, EventArgs e)
         {
             ClearMappingProgress();
 
@@ -372,7 +372,7 @@ namespace GraphUtility
                     UpdatePathsTreeView();
                 }));
                 Thread_Mapping.Start();
-                Button_Map.Text = "Abort";
+                Button_Go.Text = "Abort";
             }
         }
 
@@ -449,16 +449,11 @@ namespace GraphUtility
                 }
                 if (selectedSource == selectedTarget)
                 {
-                    Log("Source == Target!!!");
+                    Log("Source = Target");
                     return;
                 }
 
                 VertexPaths<double> paths = GraphPaths[Graph.Vertices[selectedSource]][Graph.Vertices[selectedTarget]];
-                Log(string.Format("Showing {0} -> {1}: {2} paths available.", selectedSource, selectedTarget, paths.Paths.Count));
-                if (paths.Paths.Count > 0)
-                {
-                    Log(string.Format("Paths has value of {0}", paths.Paths[0].Value));
-                }
 
                 foreach (Path<double> path in paths.Paths)
                 {
@@ -512,7 +507,7 @@ namespace GraphUtility
             {
                 _GraphFileFormat = GraphFileFormat.Coordinate;
             }
-            if (RadioButton_Coordinate.Checked)
+            if (RadioButton_Connectivity.Checked)
             {
                 _GraphFileFormat = GraphFileFormat.Connectivity;
             }
