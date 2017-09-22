@@ -51,7 +51,8 @@ namespace GraphUtility
         Dictionary<string, Coordinate2D> NodeCoordinates = new Dictionary<string, Coordinate2D>();
         private string[][] NodeConnectivity;
         private Graph<double> Graph;
-        private Dictionary<Vertex<double>, Dictionary<Vertex<double>, List<Path<double>>>> GraphMap;
+
+        private PathSetForGraph<double> GraphPaths;
 
         private Thread mappingThread;
 
@@ -188,10 +189,10 @@ namespace GraphUtility
                 return;
             }
 
-            Graph = new Graph<double>();
+            Graph = new Graph<double>(false, (double d1, double d2) => { return d1 + d2; });
             foreach (KeyValuePair<string, Coordinate2D> pair in NodeCoordinates)
             {
-                Graph.Vertices[pair.Key] = new Vertex<double>(Graph) { Name = pair.Key };
+                Graph.Vertex(pair.Key);
             }
 
             for (int i = 0; i < NodeConnectivity.Length; i++)
@@ -205,8 +206,8 @@ namespace GraphUtility
         {
             this.Invoke((MethodInvoker)delegate ()
             {
-                Progress_CurrentPath = 0;
-                Progress_AllPaths = 0;
+                Progress_Graph = 0;
+                Progress_Vertex = 0;
                 UpdateFindProgress();
             });
         }
@@ -245,17 +246,18 @@ namespace GraphUtility
             }
             else
             {
-                GraphUtility.OnFindPathProgress = OnFindPathProgress;
-                GraphUtility.OnFindAllPathsProgress = OnFindAllPathsProgress;
-                Graph.Plus = (double a, double b) =>
-                {
-                    return a + b;
-                };
-                Graph.Comparer = new DoubleComparer();
+                ProgressBar_PathSetFromVertex.Maximum = Graph.Vertices.Count - 1;
+                ProgressBar_PathSetForGraph.Maximum = Graph.Vertices.Count;
 
                 mappingThread = new Thread(new ThreadStart(() => 
                 {
-                    this.GraphMap = GraphUtility.FindAllPaths(Graph);
+                    this.GraphPaths = PathFinder.Get(PathFinder.PathFindingAlrogithm.Dijkstra).FindPathsForGraph<double>(Graph, new PathFinder.PathFinderOptions<double>()
+                    {
+                        Parallel = true,
+                        OnGraphProgress = OnGraphProgress,
+                        OnVertexProgress = OnVertexProgress,
+                        OnCompare = (double d1, double d2) => { return Math.Sign(d1 - d2); },
+                    });
 
                     mappingThread = null;
 
@@ -267,18 +269,18 @@ namespace GraphUtility
             }
         }
 
-        private double Progress_AllPaths = 0;
-        private double Progress_CurrentPath = 0;
+        private int Progress_Graph = 0;
+        private int Progress_Vertex = 0;
 
-        private void OnFindAllPathsProgress(double progress)
+        private void OnVertexProgress(PathSetFromVertex<double> vertexPathsSet)
         {
-            Progress_AllPaths = progress;
+            Progress_Vertex = vertexPathsSet.Count;
             UpdateFindProgress();
         }
 
-        private void OnFindPathProgress(double progress)
+        private void OnGraphProgress(PathSetForGraph<double> graphPathsSet)
         {
-            Progress_CurrentPath = progress;
+            Progress_Graph = graphPathsSet.Count;
             UpdateFindProgress();
         }
 
@@ -286,8 +288,8 @@ namespace GraphUtility
         {
             this.Invoke((MethodInvoker) delegate ()
             {
-                ProgressBar_CurrentPath.Value = (int)(Progress_CurrentPath * ProgressBar_CurrentPath.Maximum);
-                ProgressBar_AllPaths.Value = (int)(Progress_AllPaths * ProgressBar_AllPaths.Maximum);
+                ProgressBar_PathSetFromVertex.Value = Progress_Vertex;
+                ProgressBar_PathSetForGraph.Value = Progress_Graph;
             });
         }
 
@@ -301,7 +303,7 @@ namespace GraphUtility
                 Log("Please wait till mapping is done.");
                 return;
             }
-            if (GraphMap == null)
+            if (GraphPaths == null)
             {
                 Log("Please make a graph map first.");
                 return;
@@ -317,7 +319,7 @@ namespace GraphUtility
                 Log("Please wait till mapping is done.");
                 return;
             }
-            if (GraphMap == null)
+            if (GraphPaths == null)
             {
                 Log("Please make a graph map first.");
                 return;
@@ -330,7 +332,7 @@ namespace GraphUtility
             this.Invoke((MethodInvoker)delegate ()
             {
                 TreeView_Paths.Nodes.Clear();
-                if (GraphMap == null)
+                if (GraphPaths == null)
                 {
                     return;
                 }
@@ -344,16 +346,16 @@ namespace GraphUtility
                     return;
                 }
 
-                List<Path<double>> paths = GraphMap[Graph.Vertices[selectedSource]][Graph.Vertices[selectedTarget]];
-                Log(string.Format("Showing {0} -> {1}: {2} paths available.", selectedSource, selectedTarget, paths.Count));
-                if (paths.Count > 0)
+                VertexPaths<double> paths = GraphPaths[Graph.Vertices[selectedSource]][Graph.Vertices[selectedTarget]];
+                Log(string.Format("Showing {0} -> {1}: {2} paths available.", selectedSource, selectedTarget, paths.Paths.Count));
+                if (paths.Paths.Count > 0)
                 {
-                    Log(string.Format("Paths has value of {0}", paths[0].Value));
+                    Log(string.Format("Paths has value of {0}", paths.Paths[0].Value));
                 }
 
-                foreach (Path<double> path in paths)
+                foreach (Path<double> path in paths.Paths)
                 {
-                    TreeView_Paths.Nodes.Add(path.VertexRouteString());
+                    TreeView_Paths.Nodes.Add(path.VertexRouteString);
                     foreach (Edge<double> edge in path.Route)
                     {
                         TreeView_Paths.Nodes[TreeView_Paths.Nodes.Count - 1].Nodes.Add(edge.Name);
@@ -372,7 +374,7 @@ namespace GraphUtility
             NodeCoordinates = null;
             NodeConnectivity = null;
             Graph = null;
-            GraphMap = null;
+            GraphPaths = null;
 
         }
 

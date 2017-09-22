@@ -6,186 +6,24 @@ using System.Threading.Tasks;
 
 namespace GraphUtility
 {
-    public static class GraphUtility
-    {
-        public delegate void OnProgress(double progress);
-        public static OnProgress OnFindAllPathsProgress;
-        public static OnProgress OnFindPathProgress;
-
-        public static Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>> FindAllPaths<T>(Graph<T> graph)
-        {
-            Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>> result = new Dictionary<Vertex<T>, Dictionary<Vertex<T>, List<Path<T>>>>();
-            OnFindAllPathsProgress?.Invoke(result.Count / (double)graph.Vertices.Count);
-            foreach (KeyValuePair<string, Vertex<T>> pair in graph.Vertices)
-            {
-                result[pair.Value] = FindPathsForVertex<T>(graph, pair.Value);
-                OnFindAllPathsProgress?.Invoke(result.Count / (double)graph.Vertices.Count);
-            }
-            return result;
-        }
-
-        private static T QueryValue<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Vertex<T> target)
-        {
-            if (source == target)
-            {
-                return default(T);
-            }
-            else
-            {
-                return result[target][0].Value;
-            }
-        }
-
-        private static T ConcatinatedValue<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Edge<T> extension)
-        {
-            return graph.Plus(QueryValue<T>(graph, result, source, extension.Source), extension.Value);
-            if (extension.Source == source)
-            {
-                return extension.Value;
-            }
-            else
-            {
-                return graph.Plus(result[extension.Source][0].Value, extension.Value);
-            }
-        }
-
-        public static Dictionary<Vertex<T>, List<Path<T>>> FindPathsForVertex<T>(Graph<T> graph, Vertex<T> vertex)
-        {
-
-            Dictionary<Vertex<T>, List<Path<T>>> result = new Dictionary<Vertex<T>, List<Path<T>>>();
-            List<Vertex<T>> todoVertices = new List<Vertex<T>>();
-            foreach (KeyValuePair<string, Vertex<T>> pair in graph.Vertices)
-            {
-                todoVertices.Add(pair.Value);
-            }
-
-            todoVertices.Remove(vertex);
-
-            Edge<T> tempEdge = null;
-
-            OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
-
-            foreach (Edge<T> edge in vertex.Out)
-            {
-                if (tempEdge == null)
-                {
-                    tempEdge = edge;
-                }
-                else
-                {
-                    tempEdge = graph.Comparer.Compare(edge.Value, tempEdge.Value) < 0 ? edge : tempEdge;
-                }
-            }
-            if (tempEdge == null)
-            {
-                return result;
-            }
-            todoVertices.Remove(tempEdge.Target);
-            OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
-
-            result[tempEdge.Target] = new List<Path<T>>()
-                {
-                    new Path<T>(graph),
-                };
-            result[tempEdge.Target][0].Route.Add(tempEdge);
-
-            while (todoVertices.Count > 0)
-            {
-                tempEdge = null;
-
-                // find closest untouched vertex
-                foreach (KeyValuePair<string, Edge<T>> pair in graph.Edges)
-                {
-                    if ((result.ContainsKey(pair.Value.Source) || pair.Value.Source == vertex) && todoVertices.Contains(pair.Value.Target))
-                    {
-                        if (tempEdge == null)
-                        {
-                            tempEdge = pair.Value;
-                        }
-                        else
-                        {
-                            int compareResult = graph.Comparer.Compare(
-                                ConcatinatedValue<T>(graph, result, vertex, pair.Value),
-                                ConcatinatedValue<T>(graph, result, vertex, tempEdge)
-                            ); 
-                            if (compareResult < 0)
-                            {
-                                tempEdge = pair.Value;
-                            }
-                        }
-                    }
-                }
-
-                if (tempEdge == null)
-                {
-                    break;
-                }
-                todoVertices.Remove(tempEdge.Target);
-
-                result[tempEdge.Target] = Concatinate<T>(graph, result, vertex, tempEdge.Source, tempEdge);
-
-                foreach (Edge<T> outEdge in tempEdge.Target.Out)
-                {
-                    if ((result.ContainsKey(outEdge.Target))|| outEdge.Target == vertex)
-                    {
-                        int compareResult = graph.Comparer.Compare(
-                                ConcatinatedValue<T>(graph, result, vertex, outEdge),
-                                QueryValue<T>(graph, result, vertex, outEdge.Target)
-                            );
-                        if (compareResult < 0)
-                        {
-                            result[outEdge.Target].Clear();
-                        }
-                        if (compareResult <= 0)
-                        {
-                            result[outEdge.Target].AddRange(Concatinate<T>(graph, result, vertex, outEdge.Source, outEdge));
-                        }
-                    }
-                }
-
-                OnFindPathProgress?.Invoke((graph.Vertices.Count - todoVertices.Count) / (double)graph.Vertices.Count);
-            }
-
-            return result;
-        }
-
-        private static List<Path<T>> Concatinate<T>(Graph<T> graph, Dictionary<Vertex<T>, List<Path<T>>> result, Vertex<T> source, Vertex<T> target, Edge<T> extension)
-        {
-            List<Path<T>> tempPaths = new List<Path<T>>();
-            if (source == target)
-            {
-                Path<T> tempPath = new Path<T>(graph);
-                tempPath.Route.Add(extension);
-                tempPaths.Add(tempPath);
-            }
-            else
-            {
-                foreach (Path<T> path in result[target])
-                {
-                    Path<T> tempPath = new Path<T>(graph);
-                    tempPath.Route.AddRange(path.Route);
-                    tempPath.Route.Add(extension);
-                    tempPaths.Add(tempPath);
-                }
-            }
-            return tempPaths;
-        }
-
-    }
-
-
     // peer edges not allowed
     public class Graph<T>
     {
         public string Name;
-        public bool Directional = false;
-        public delegate T PlusDelegate(T t1, T t2);
-        public PlusDelegate Plus;
-        public IComparer<T> Comparer;
+
+        public readonly bool Directional;
+        public delegate T SumDelegate(T t1, T t2);
+        public readonly SumDelegate Sum;
         private Dictionary<string, Vertex<T>> _Vertices = new Dictionary<string, Vertex<T>>();
         public Dictionary<string, Vertex<T>> Vertices { get { return _Vertices; } }
         private Dictionary<string, Edge<T>> _Edges = new Dictionary<string, Edge<T>>();
         public Dictionary<string, Edge<T>> Edges { get { return _Edges; } }
+
+        public Graph(bool directional, SumDelegate sum)
+        {
+            Directional = directional;
+            Sum = sum;
+        }
 
         public T this[string source, string target]
         {
@@ -204,11 +42,11 @@ namespace GraphUtility
             {
                 if (!Vertices.ContainsKey(source))
                 {
-                    Vertices[source] = new Vertex<T>(this) { Name = source };
+                    Vertex(source);
                 }
                 if (!Vertices.ContainsKey(target))
                 {
-                    Vertices[target] = new Vertex<T>(this) { Name = target };
+                    Vertex(target);
                 }
                 bool found = false;
                 foreach (KeyValuePair<string, Edge<T>> pair in this.Edges)
@@ -248,34 +86,193 @@ namespace GraphUtility
                 }
             }
         }
-    }
 
-    public class VertexPaths<T>: IGraphElement<T>
-    {
-        public Graph<T> Graph { get; }
-        public Vertex<T> Source { get; }
-
-        public bool MultiPaths { get; }
-
-        private Dictionary<Vertex<T>, List<Path<T>>> paths = new Dictionary<Vertex<T>, List<GraphUtility.Path<T>>>();
-        public VertexPaths(Graph<T> graph, Vertex<T> source, bool multiPaths = false)
+        public Vertex<T> Vertex(string name = "", T value = default(T))
         {
-            Graph = graph;
-            Source = source;
-            MultiPaths = multiPaths;
+            if (this.Vertices.ContainsKey(name))
+            {
+                return null;
+            }
+
+            Vertex<T> vertex = new Vertex<T>(this);
+            vertex.Name = name;
+            vertex.Value = value;
+            this.Vertices[vertex.Name] = vertex;
+
+            vertex.Self = new SelfLoopEdge<T>(this);
+            vertex.Self.Vertex = vertex;
+            vertex.Self.Name = vertex.Name + " -> " + vertex.Name;
+            this.Edges[vertex.Self.Name] = vertex.Self;
+
+            return vertex;
         }
 
-        public List<Path<T>> this[Vertex<T> vertex]
+        public Edge<T> Edge(Vertex<T> source, Vertex<T> target, string name = "", T value = default(T))
+        {
+            if (source == null || target == null)
+            {
+                return null;
+            }
+            if (source.Graph != this || target.Graph != this)
+            {
+                return null;
+            }
+            if (source == target)
+            {
+                return null;
+            }
+            if (this.Edges.ContainsKey(name))
+            {
+                return null;
+            }
+
+            Edge<T> edge = new Edge<T>(this);
+            edge.Name = name;
+            edge.Source = source;
+            edge.Target = target;
+            edge.Value = value;
+
+            this.Edges[edge.Name] = edge;
+            source.Out.Add(edge);
+            target.In.Add(edge);
+
+            return edge;
+        }
+    }
+
+    public class PathSetForGraph<T> : GraphObject<T>
+    {
+        private Dictionary<Vertex<T>, PathSetFromVertex<T>> _VertexPaths = new Dictionary<Vertex<T>, PathSetFromVertex<T>>();
+
+        public PathSetFromVertex<T> this[Vertex<T> vertex]
         {
             get
             {
-                throw new NotImplementedException();
+                if (!_VertexPaths.ContainsKey(vertex))
+                {
+                    return null;
+                }
+                return _VertexPaths[vertex];
             }
             set
             {
-                throw new NotImplementedException();
+                _VertexPaths[vertex] = value;
             }
         }
+
+        public int Count
+        {
+            get
+            {
+                return _VertexPaths.Count;
+            }
+        }
+
+        public PathSetForGraph(Graph<T> graph): base(graph)
+        {
+        }
+
+    }
+
+    public class PathSetFromVertex<T>: GraphObject<T>
+    {
+        public Vertex<T> Source { get; }
+
+        private VertexPaths<T> SelfPath;
+        private Dictionary<Vertex<T>, VertexPaths<T>> _Paths = new Dictionary<Vertex<T>, VertexPaths<T>>();
+        public PathSetFromVertex(Graph<T> graph, Vertex<T> source): base(graph)
+        {
+            Source = source;
+
+            SelfPath = new VertexPaths<T>(this.Graph, source, source);
+            SelfPath.Paths.Add(new Path<T>(this.Graph));
+            SelfPath.Paths[0].Route.Add(source.Self);
+        }
+
+        public int Count
+        {
+            get
+            {
+                return _Paths.Count;
+            }
+        }
+
+        public VertexPaths<T> this[Vertex<T> vertex]
+        {
+            get
+            {
+                if (vertex == Source)
+                {
+                    return SelfPath;
+                }
+                if (!_Paths.ContainsKey(vertex))
+                {
+                    return null;
+                }
+                return _Paths[vertex];
+            }
+            set
+            {
+                _Paths[vertex] = value;
+            }
+        }
+    }
+
+    public class VertexPaths<T>: GraphObject<T>
+    {
+        private Vertex<T> _Source;
+        private Vertex<T> _Target;
+
+        public Vertex<T> Source { get { return _Source; } }
+        public Vertex<T> Target { get { return _Target; } }
+
+        public T Value
+        {
+            get
+            {
+                if (Paths.Count <= 0)
+                {
+                    return default(T);
+                }
+                return Paths[0].Value;
+            }
+        }
+
+        private List<Path<T>> _Paths = new List<Path<T>>();
+        public List<Path<T>> Paths { get { return _Paths; } }
+
+        public VertexPaths(Graph<T> graph, Vertex<T> source, Vertex<T> target):base(graph)
+        {
+            _Source = source;
+            _Target = target;
+        }
+
+
+        public static VertexPaths<T> operator +(VertexPaths<T> paths, Edge<T> edge)
+        {
+            if (paths.Source == edge.Target)
+            {
+                return null;
+            }
+            if (paths.Target != edge.Source)
+            {
+                return null;
+            }
+            if (paths.Graph != edge.Graph)
+            {
+                return null;
+            }
+
+            VertexPaths<T> result = new VertexPaths<T>(paths.Graph, paths.Source, edge.Target);
+            foreach (Path<T> path in paths.Paths)
+            {
+                Path<T> tempPath = path + edge;
+                result.Paths.Add(tempPath);
+            }
+            return result;
+        }
+
+
     }
 
     public interface IGraphValue<T>
@@ -283,49 +280,59 @@ namespace GraphUtility
         T Value { get; }
     }
 
-    public interface IGraphElement<T>
+    public abstract class GraphObject<T>
     {
-        Graph<T> Graph { get; }
+        public Graph<T> Graph { get; }
+        public GraphObject(Graph<T> graph)
+        {
+            Graph = graph;
+        }
     }
 
-    public class Vertex<T> : IGraphElement<T>, IGraphValue<T>
+    public class Vertex<T> : GraphObject<T>, IGraphValue<T>
     {
         public string Name;
-        public Graph<T> Graph { get; }
 
         private T _Value = default(T);
         public T Value { get { return _Value; } set { _Value = value; } }
-        public Edge<T> Self { get; set; }
+        public SelfLoopEdge<T> Self { get; set; }
         private List<Edge<T>> _In = new List<Edge<T>>();
         public List<Edge<T>> In { get { return _In; } }
         private List<Edge<T>> _Out = new List<Edge<T>>();
         public List<Edge<T>> Out { get { return _Out; } }
 
-        public Vertex (Graph<T> graph)
+        public Vertex (Graph<T> graph): base(graph)
         {
-            Graph = graph;
         }
     }
 
-    public class Edge<T>: IGraphElement<T>, IGraphValue<T>
+    public class Edge<T>: GraphObject<T>, IGraphValue<T>
     {
         public string Name;
-        public Graph<T> Graph { get; }
 
-        public Vertex<T> Source { get; set; }
-        public Vertex<T> Target { get; set; }
+        public virtual Vertex<T> Source { get; set; }
+        public virtual Vertex<T> Target { get; set; }
 
         private T _Value = default(T);
-        public T Value { get { return _Value; } set { _Value = value; } }
-        public Edge(Graph<T> graph)
+        public virtual T Value { get { return _Value; } set { _Value = value; } }
+        public Edge(Graph<T> graph): base(graph)
         {
-            Graph = graph;
         }
     }
 
-    public class Path<T>: IGraphElement<T>, IGraphValue<T>
+    public class SelfLoopEdge<T> : Edge<T>
     {
-        public Graph<T> Graph { get; }
+        private Vertex<T> _Vertex;
+        public Vertex<T> Vertex { get { return _Vertex; } set { _Vertex = value; } }
+        public override Vertex<T> Source { get { return _Vertex; } set { _Vertex = value; } }
+        public override Vertex<T> Target { get { return _Vertex; } set { _Vertex = value; } }
+        public SelfLoopEdge(Graph<T> graph) : base(graph)
+        {
+        }
+    }
+
+    public class Path<T>: GraphObject<T>, IGraphValue<T>
+    {
         public Vertex<T> Source
         {
             get
@@ -353,17 +360,17 @@ namespace GraphUtility
         {
             get
             {
-                if (this.Graph == null || this.Graph.Plus == null || Route.Count <= 0)
+                if (this.Graph == null || this.Graph.Sum == null || Route.Count <= 0)
                 {
                     return default(T);
                 }
 
                 T result = default(T);
-                result = this.Graph.Plus(result, Route[0].Source.Value);
+                result = this.Graph.Sum(result, Route[0].Source.Value);
                 for (int i = 0; i < Route.Count; i++)
                 {
-                    result = this.Graph.Plus(result, Route[i].Value);
-                    result = this.Graph.Plus(result, Route[i].Target.Value);
+                    result = this.Graph.Sum(result, Route[i].Value);
+                    result = this.Graph.Sum(result, Route[i].Target.Value);
                 }
                 return result;
             }
@@ -372,20 +379,46 @@ namespace GraphUtility
         private List<Edge<T>> _Route = new List<Edge<T>>();
         public List<Edge<T>> Route { get { return _Route; } }
 
-        public Path(Graph<T> graph)
+        public Path(Graph<T> graph): base(graph)
         {
-            Graph = graph;
         }
 
-        public string VertexRouteString(string concatinator = " -> ")
+        public static Path<T> operator +(Path<T> path, Edge<T> edge)
         {
-            List<string> vertexNames = new List<string>();
-            vertexNames.Add(Route[0].Source.Name);
-            for (int i = 0; i < Route.Count; i++)
+            if (path == null || edge == null)
             {
-                vertexNames.Add(Route[i].Target.Name);
+                return null;
             }
-            return string.Join(concatinator, vertexNames.ToArray());
+            if (path.Graph != edge.Graph)
+            {
+                return null;
+            }
+            if (path.Target != edge.Source)
+            {
+                return null;
+            }
+            Path<T> result = new Path<T>(path.Graph);
+            if (path.Source != path.Target)
+            {
+                result.Route.AddRange(path.Route);
+            }
+            result.Route.Add(edge);
+            return result;
+        }
+
+        public string VertexRouteString
+        {
+            get
+            {
+                string concatinator = " -> ";
+                List<string> vertexNames = new List<string>();
+                vertexNames.Add(Route[0].Source.Name);
+                for (int i = 0; i < Route.Count; i++)
+                {
+                    vertexNames.Add(Route[i].Target.Name);
+                }
+                return string.Join(concatinator, vertexNames.ToArray());
+            }
         }
     }
 

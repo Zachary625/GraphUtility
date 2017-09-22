@@ -39,8 +39,8 @@
             this.Label_Vertices = new System.Windows.Forms.Label();
             this.Label_Edges = new System.Windows.Forms.Label();
             this.Button_Build = new System.Windows.Forms.Button();
-            this.ProgressBar_CurrentPath = new System.Windows.Forms.ProgressBar();
-            this.ProgressBar_AllPaths = new System.Windows.Forms.ProgressBar();
+            this.ProgressBar_PathSetFromVertex = new System.Windows.Forms.ProgressBar();
+            this.ProgressBar_PathSetForGraph = new System.Windows.Forms.ProgressBar();
             this.Button_Map = new System.Windows.Forms.Button();
             this.Label_AllPaths = new System.Windows.Forms.Label();
             this.Label_CurrentProgress = new System.Windows.Forms.Label();
@@ -150,17 +150,17 @@
             // 
             // ProgressBar_CurrentPath
             // 
-            this.ProgressBar_CurrentPath.Location = new System.Drawing.Point(103, 68);
-            this.ProgressBar_CurrentPath.Name = "ProgressBar_CurrentPath";
-            this.ProgressBar_CurrentPath.Size = new System.Drawing.Size(568, 23);
-            this.ProgressBar_CurrentPath.TabIndex = 11;
+            this.ProgressBar_PathSetFromVertex.Location = new System.Drawing.Point(103, 68);
+            this.ProgressBar_PathSetFromVertex.Name = "ProgressBar_CurrentPath";
+            this.ProgressBar_PathSetFromVertex.Size = new System.Drawing.Size(568, 23);
+            this.ProgressBar_PathSetFromVertex.TabIndex = 11;
             // 
             // ProgressBar_AllPaths
             // 
-            this.ProgressBar_AllPaths.Location = new System.Drawing.Point(103, 97);
-            this.ProgressBar_AllPaths.Name = "ProgressBar_AllPaths";
-            this.ProgressBar_AllPaths.Size = new System.Drawing.Size(568, 23);
-            this.ProgressBar_AllPaths.TabIndex = 12;
+            this.ProgressBar_PathSetForGraph.Location = new System.Drawing.Point(103, 97);
+            this.ProgressBar_PathSetForGraph.Name = "ProgressBar_AllPaths";
+            this.ProgressBar_PathSetForGraph.Size = new System.Drawing.Size(568, 23);
+            this.ProgressBar_PathSetForGraph.TabIndex = 12;
             // 
             // Button_Map
             // 
@@ -220,8 +220,8 @@
             this.Controls.Add(this.Label_AllPaths);
             this.Controls.Add(this.Label_CurrentProgress);
             this.Controls.Add(this.Button_Map);
-            this.Controls.Add(this.ProgressBar_AllPaths);
-            this.Controls.Add(this.ProgressBar_CurrentPath);
+            this.Controls.Add(this.ProgressBar_PathSetForGraph);
+            this.Controls.Add(this.ProgressBar_PathSetFromVertex);
             this.Controls.Add(this.Button_Build);
             this.Controls.Add(this.Label_Edges);
             this.Controls.Add(this.Label_Vertices);
@@ -253,8 +253,8 @@
         private System.Windows.Forms.Label Label_Vertices;
         private System.Windows.Forms.Label Label_Edges;
         private System.Windows.Forms.Button Button_Build;
-        private System.Windows.Forms.ProgressBar ProgressBar_CurrentPath;
-        private System.Windows.Forms.ProgressBar ProgressBar_AllPaths;
+        private System.Windows.Forms.ProgressBar ProgressBar_PathSetFromVertex;
+        private System.Windows.Forms.ProgressBar ProgressBar_PathSetForGraph;
         private System.Windows.Forms.Button Button_Map;
         private System.Windows.Forms.Label Label_AllPaths;
         private System.Windows.Forms.Label Label_CurrentProgress;
