@@ -494,7 +494,7 @@ namespace GraphUtility
 
         private void Button_Help_Click(object sender, EventArgs e)
         {
-
+            new HelpWindow().ShowDialog(this);
         }
 
         private void RadioButton_Coordinate_CheckedChanged(object sender, EventArgs e)

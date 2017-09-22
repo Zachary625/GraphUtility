@@ -48,8 +48,8 @@
             this.Button_Save = new System.Windows.Forms.Button();
             this.Button_Help = new System.Windows.Forms.Button();
             this.Panel_FileFormat = new System.Windows.Forms.Panel();
-            this.RadioButton_Coordinate = new System.Windows.Forms.RadioButton();
             this.RadioButton_Connectivity = new System.Windows.Forms.RadioButton();
+            this.RadioButton_Coordinate = new System.Windows.Forms.RadioButton();
             this.Panel_FileFormat.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -217,8 +217,8 @@
             // 
             // Button_Help
             // 
-            this.Button_Help.BackColor = System.Drawing.Color.Yellow;
-            this.Button_Help.Font = new System.Drawing.Font("Gadugi", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Button_Help.BackColor = System.Drawing.Color.LightSkyBlue;
+            this.Button_Help.Font = new System.Drawing.Font("Verdana", 26.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Button_Help.ForeColor = System.Drawing.Color.RoyalBlue;
             this.Button_Help.Location = new System.Drawing.Point(7, 10);
             this.Button_Help.Name = "Button_Help";
@@ -237,6 +237,17 @@
             this.Panel_FileFormat.Size = new System.Drawing.Size(109, 52);
             this.Panel_FileFormat.TabIndex = 19;
             // 
+            // RadioButton_Connectivity
+            // 
+            this.RadioButton_Connectivity.AutoSize = true;
+            this.RadioButton_Connectivity.Location = new System.Drawing.Point(11, 29);
+            this.RadioButton_Connectivity.Name = "RadioButton_Connectivity";
+            this.RadioButton_Connectivity.Size = new System.Drawing.Size(95, 16);
+            this.RadioButton_Connectivity.TabIndex = 1;
+            this.RadioButton_Connectivity.Text = "Connectivity";
+            this.RadioButton_Connectivity.UseVisualStyleBackColor = true;
+            this.RadioButton_Connectivity.CheckedChanged += new System.EventHandler(this.RadioButton_Connectivity_CheckedChanged);
+            // 
             // RadioButton_Coordinate
             // 
             this.RadioButton_Coordinate.AutoSize = true;
@@ -249,17 +260,6 @@
             this.RadioButton_Coordinate.Text = "Coordinate";
             this.RadioButton_Coordinate.UseVisualStyleBackColor = true;
             this.RadioButton_Coordinate.CheckedChanged += new System.EventHandler(this.RadioButton_Coordinate_CheckedChanged);
-            // 
-            // RadioButton_Connectivity
-            // 
-            this.RadioButton_Connectivity.AutoSize = true;
-            this.RadioButton_Connectivity.Location = new System.Drawing.Point(11, 29);
-            this.RadioButton_Connectivity.Name = "RadioButton_Connectivity";
-            this.RadioButton_Connectivity.Size = new System.Drawing.Size(95, 16);
-            this.RadioButton_Connectivity.TabIndex = 1;
-            this.RadioButton_Connectivity.Text = "Connectivity";
-            this.RadioButton_Connectivity.UseVisualStyleBackColor = true;
-            this.RadioButton_Connectivity.CheckedChanged += new System.EventHandler(this.RadioButton_Connectivity_CheckedChanged);
             // 
             // MainWindow
             // 

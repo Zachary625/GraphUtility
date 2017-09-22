@@ -16,5 +16,10 @@ namespace GraphUtility
         {
             InitializeComponent();
         }
+
+        private void Button_OK_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
     }
 }
