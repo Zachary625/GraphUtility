@@ -14,6 +14,12 @@ namespace GraphUtility
 {
     public partial class MainWindow : Form
     {
+        private enum GraphFileFormat
+        {
+            Coordinate,
+            Connectivity,
+        }
+        private GraphFileFormat _GraphFileFormat = GraphFileFormat.Coordinate;
         public MainWindow()
         {
             InitializeComponent();
@@ -48,13 +54,11 @@ namespace GraphUtility
                 return Math.Sign(a - b);
             }
         }
-        Dictionary<string, Coordinate2D> NodeCoordinates = new Dictionary<string, Coordinate2D>();
-        private string[][] NodeConnectivity;
         private Graph<double> Graph;
 
         private PathSetForGraph<double> GraphPaths;
 
-        private Thread mappingThread;
+        private Thread Thread_Mapping;
 
         private void LogClear()
         {
@@ -79,15 +83,15 @@ namespace GraphUtility
             });
         }
 
-        private void LoadVerticesInfo(string fileName)
+        private Dictionary<string, Coordinate2D> LoadVertexInfo_Coordinate(string fileName)
         {
             if (!File.Exists(fileName))
             {
-                return;
+                return null;
             }
             string[] lines = File.ReadAllLines(fileName);
 
-            NodeCoordinates = new Dictionary<string, Coordinate2D>();
+            Dictionary<string, Coordinate2D> coordinates = new Dictionary<string, Coordinate2D>();
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] split = lines[i].Split(' ');
@@ -107,7 +111,7 @@ namespace GraphUtility
                     }
                     if (xParsed && yParsed)
                     {
-                        NodeCoordinates[split[0]] = new Coordinate2D() { x = x, y = y };
+                        coordinates[split[0]] = new Coordinate2D() { x = x, y = y };
                     }
                 }
                 else
@@ -115,16 +119,18 @@ namespace GraphUtility
                     Log(string.Format("Vertex definition error at line {0}: {1}", (i + 1), lines[i]));
                 }
             }
+
+            return coordinates;
         }
 
-        private void LoadEdgesInfo(string fileName)
+        private string[][] LoadEdgeInfo_Coordinate(string fileName)
         {
             if (!File.Exists(fileName))
             {
-                return;
+                return null;
             }
             string[] lines = File.ReadAllLines(fileName);
-            NodeConnectivity = new string[lines.Length][];
+            string[][] connectivity = new string[lines.Length][];
             for (int i = 0; i < lines.Length; i++)
             {
                 string[] split = lines[i].Split(' ');
@@ -134,26 +140,55 @@ namespace GraphUtility
                 }
                 else
                 {
-                    if (!NodeCoordinates.ContainsKey(split[0]))
-                    {
-                        Log(string.Format("Edge definition line {0} referred to undefined vertex: {1}", (i + 1), split[0]));
-                    }
-                    if (!NodeCoordinates.ContainsKey(split[1]))
-                    {
-                        Log(string.Format("Edge definition line {0} referred to undefined vertex: {1}", (i + 1), split[1]));
-                    }
-
-                    if (NodeCoordinates.ContainsKey(split[0]) && NodeCoordinates.ContainsKey(split[1]))
-                    {
-                        NodeConnectivity[i] = new string[2];
-                        NodeConnectivity[i][0] = split[0];
-                        NodeConnectivity[i][1] = split[1];
-                    }
+                    connectivity[i] = new string[2];
+                    connectivity[i][0] = split[0];
+                    connectivity[i][1] = split[1];
                 }
             }
+            return connectivity;
         }
 
-        private void Button_SelectVerticesFile_Click(object sender, EventArgs e)
+        private string[][] LoadEdgeInfo_Connectivity(string fileName)
+        {
+            if (!File.Exists(fileName))
+            {
+                return null;
+            }
+            string[] lines = File.ReadAllLines(fileName);
+            string[][] connectivity = new string[lines.Length][];
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string[] split = lines[i].Split(' ');
+                double value;
+                if (split.Length != 3)
+                {
+                    Log(string.Format("Edge definition error at line {0}", (i + 1), lines[i]));
+                }
+                else if (!double.TryParse(split[2], out value))
+                {
+                    Log(string.Format("Edge value error at line {0}", (i + 1), lines[i]));
+                }
+                else
+                {
+                    connectivity[i] = new string[2];
+                    connectivity[i][0] = split[0];
+                    connectivity[i][1] = split[1];
+                    connectivity[i][2] = split[2];
+                }
+            }
+            return connectivity;
+        }
+
+        private string FileName_Vertex;
+        private string FileName_Edge;
+
+        private void UpdateTextBox_FileNames()
+        {
+            TextBox_VertexFilePath.Text = FileName_Vertex;
+            TextBox_EdgeFilePath.Text = FileName_Edge;
+        }
+
+        private void Button_SelectVertexFile_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Multiselect = false;
@@ -163,11 +198,11 @@ namespace GraphUtility
             {
                 return;
             }
-            TextBox_VerticesFilePath.Text = ofd.FileName;
-            LoadVerticesInfo(ofd.FileName);
+            FileName_Vertex = ofd.FileName;
+            UpdateTextBox_FileNames();
         }
 
-        private void Button_SelectEdgesFile_Click(object sender, EventArgs e)
+        private void Button_SelectEdgeFile_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Multiselect = false;
@@ -177,27 +212,99 @@ namespace GraphUtility
             {
                 return;
             }
-            TextBox_EdgesFilePath.Text = ofd.FileName;
-            LoadEdgesInfo(ofd.FileName);
+            FileName_Edge = ofd.FileName;
+            UpdateTextBox_FileNames();
         }
 
         private void Button_Build_Click(object sender, EventArgs e)
         {
-            if (NodeCoordinates == null || NodeConnectivity == null)
+            switch (this._GraphFileFormat)
             {
-                Log("Incomplete Graph, please make sure correct vertices file and edges file are loaded.");
+                case GraphFileFormat.Coordinate:
+                    {
+                        BuildGraph_Coordinate();
+                        break;
+                    }
+                case GraphFileFormat.Connectivity:
+                    {
+                        BuildGraph_Connectivity();
+                        break;
+                    }
+            }
+        }
+
+        private void BuildGraph_Coordinate()
+        {
+            if (string.IsNullOrEmpty(FileName_Vertex))
+            {
+                Log("Vertex File Absent!");
+            }
+            if (string.IsNullOrEmpty(FileName_Edge))
+            {
+                Log("Edge File Absent!");
+            }
+            Dictionary<string, Coordinate2D> coordinates = LoadVertexInfo_Coordinate(FileName_Vertex);
+            string[][] connectivity = LoadEdgeInfo_Coordinate(FileName_Edge);
+            if (coordinates == null || connectivity == null)
+            {
+                Log("Failed to build graph, please make sure correct vertex file and edge file are loaded.");
                 return;
             }
 
             Graph = new Graph<double>(false, (double d1, double d2) => { return d1 + d2; });
-            foreach (KeyValuePair<string, Coordinate2D> pair in NodeCoordinates)
+            foreach (KeyValuePair<string, Coordinate2D> pair in coordinates)
             {
                 Graph.Vertex(pair.Key);
             }
 
-            for (int i = 0; i < NodeConnectivity.Length; i++)
+            for (int i = 0; i < connectivity.Length; i++)
             {
-                Graph[NodeConnectivity[i][0], NodeConnectivity[i][1]] = (NodeCoordinates[NodeConnectivity[i][0]] - NodeCoordinates[NodeConnectivity[i][1]]).Magnitute;
+                if (!coordinates.ContainsKey(connectivity[i][0]))
+                {
+                    Log(string.Format("Edge definition line {0} referred to undefined vertex: {1}", (i + 1), connectivity[i][0]));
+                }
+                if (!coordinates.ContainsKey(connectivity[i][1]))
+                {
+                    Log(string.Format("Edge definition line {0} referred to undefined vertex: {1}", (i + 1), connectivity[i][1]));
+                }
+
+                if (coordinates.ContainsKey(connectivity[i][0]) && coordinates.ContainsKey(connectivity[i][1]))
+                {
+                    Graph[connectivity[i][0], connectivity[i][1]] = (coordinates[connectivity[i][0]] - coordinates[connectivity[i][1]]).Magnitute;
+                }
+
+            }
+            Log(string.Format("Graph built. {0} vertices, {1} edges.", Graph.Vertices.Count, Graph.Edges.Count));
+        }
+
+        private void BuildGraph_Connectivity()
+        {
+            if (string.IsNullOrEmpty(FileName_Edge))
+            {
+                Log("Edge File Absent!");
+            }
+            string[][] connectivity = LoadEdgeInfo_Coordinate(FileName_Edge);
+            if (connectivity == null)
+            {
+                Log("Failed to build graph, please make sure correct edge file is loaded.");
+                return;
+            }
+
+            Graph = new Graph<double>(false, (double d1, double d2) => { return d1 + d2; });
+
+            for (int i = 0; i < connectivity.Length; i++)
+            {
+                if (!Graph.Vertices.ContainsKey(connectivity[i][0]))
+                {
+                    Graph.Vertex(connectivity[i][0]);
+                }
+                if (!Graph.Vertices.ContainsKey(connectivity[i][1]))
+                {
+                    Graph.Vertex(connectivity[i][1]);
+                }
+                double value = double.Parse(connectivity[i][2]); 
+
+                Graph[connectivity[i][0], connectivity[i][1]] = value;
             }
             Log(string.Format("Graph built. {0} vertices, {1} edges.", Graph.Vertices.Count, Graph.Edges.Count));
         }
@@ -238,10 +345,10 @@ namespace GraphUtility
         {
             ClearMappingProgress();
 
-            if (mappingThread != null)
+            if (Thread_Mapping != null)
             {
-                mappingThread.Abort();
-                mappingThread = null;
+                Thread_Mapping.Abort();
+                Thread_Mapping = null;
                 Mapped();
             }
             else
@@ -249,7 +356,7 @@ namespace GraphUtility
                 ProgressBar_PathSetFromVertex.Maximum = Graph.Vertices.Count - 1;
                 ProgressBar_PathSetForGraph.Maximum = Graph.Vertices.Count;
 
-                mappingThread = new Thread(new ThreadStart(() => 
+                Thread_Mapping = new Thread(new ThreadStart(() => 
                 {
                     this.GraphPaths = PathFinder.Get(PathFinder.PathFindingAlrogithm.Dijkstra).FindPathsForGraph<double>(Graph, new PathFinder.PathFinderOptions<double>()
                     {
@@ -259,12 +366,12 @@ namespace GraphUtility
                         OnCompare = (double d1, double d2) => { return Math.Sign(d1 - d2); },
                     });
 
-                    mappingThread = null;
+                    Thread_Mapping = null;
 
                     Mapped();
                     UpdatePathsTreeView();
                 }));
-                mappingThread.Start();
+                Thread_Mapping.Start();
                 Button_Map.Text = "Abort";
             }
         }
@@ -298,7 +405,7 @@ namespace GraphUtility
         private void ListBox_Source_SelectedIndexChanged(object sender, EventArgs e)
         {
             selectedSource = ListBox_Source.SelectedItem.ToString();
-            if (mappingThread != null)
+            if (Thread_Mapping != null)
             {
                 Log("Please wait till mapping is done.");
                 return;
@@ -314,7 +421,7 @@ namespace GraphUtility
         private void ListBox_Target_SelectedIndexChanged(object sender, EventArgs e)
         {
             selectedTarget = ListBox_Target.SelectedItem.ToString();
-            if (mappingThread != null)
+            if (Thread_Mapping != null)
             {
                 Log("Please wait till mapping is done.");
                 return;
@@ -371,8 +478,10 @@ namespace GraphUtility
             ClearGraphMap();
             LogClear();
 
-            NodeCoordinates = null;
-            NodeConnectivity = null;
+            FileName_Vertex = string.Empty;
+            FileName_Edge = string.Empty;
+            UpdateTextBox_FileNames();
+
             Graph = null;
             GraphPaths = null;
 
@@ -381,6 +490,32 @@ namespace GraphUtility
         private void Button_Save_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void Button_Help_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void RadioButton_Coordinate_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateGraphFileFormat();
+        }
+
+        private void RadioButton_Connectivity_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateGraphFileFormat();
+        }
+        private void UpdateGraphFileFormat()
+        {
+            if (RadioButton_Coordinate.Checked)
+            {
+                _GraphFileFormat = GraphFileFormat.Coordinate;
+            }
+            if (RadioButton_Coordinate.Checked)
+            {
+                _GraphFileFormat = GraphFileFormat.Connectivity;
+            }
         }
     }
 
